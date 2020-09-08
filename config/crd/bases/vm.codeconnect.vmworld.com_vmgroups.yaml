@@ -1,0 +1,112 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: vmgroups.vm.codeconnect.vmworld.com
+spec:
+  group: vm.codeconnect.vmworld.com
+  names:
+    kind: VmGroup
+    listKind: VmGroupList
+    plural: vmgroups
+    shortNames:
+    - vg
+    singular: vmgroup
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.currentReplicas
+      name: Current
+      type: integer
+    - jsonPath: .spec.replicas
+      name: Desired
+      type: integer
+    - jsonPath: .spec.cpu
+      name: CPU
+      type: integer
+    - jsonPath: .spec.memory
+      name: Memory
+      type: integer
+    - jsonPath: .spec.template
+      name: Template
+      type: string
+    - jsonPath: .status.lastMessage
+      name: Last_Message
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VmGroup is the Schema for the vmgroups API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VmGroupSpec defines the desired state of VmGroup
+            properties:
+              cpu:
+                format: int32
+                maximum: 4
+                minimum: 1
+                type: integer
+              memory:
+                format: int32
+                maximum: 8
+                minimum: 1
+                type: integer
+              replicas:
+                format: int32
+                minimum: 1
+                type: integer
+              template:
+                type: string
+            required:
+            - cpu
+            - memory
+            - replicas
+            - template
+            type: object
+          status:
+            description: VmGroupStatus defines the observed state of VmGroup
+            properties:
+              currentReplicas:
+                format: int32
+                type: integer
+              desiredReplicas:
+                format: int32
+                type: integer
+              lastMessage:
+                type: string
+              phase:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.desiredReplicas
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

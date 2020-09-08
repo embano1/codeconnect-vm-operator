@@ -1,0 +1,7 @@
+domain: codeconnect.vmworld.com
+repo: codeconnect/operator
+resources:
+- group: vm
+  kind: VmGroup
+  version: v1alpha1
+version: "2"

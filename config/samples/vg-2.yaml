@@ -1,0 +1,11 @@
+apiVersion: vm.codeconnect.vmworld.com/v1alpha1
+kind: VmGroup
+metadata:
+  name: vg-2
+spec:
+  # Add fields here
+  cpu: 2
+  memory: 2
+  replicas: 2
+  template: vm-operator-temp # intentional error to show fix with patch
+
