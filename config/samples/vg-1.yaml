@@ -1,0 +1,10 @@
+apiVersion: vm.codeconnect.vmworld.com/v1alpha1
+kind: VmGroup
+metadata:
+  name: vg-1
+spec:
+  cpu: 1
+  memory: 1 # in GB
+  replicas: 3
+  template: vm-operator-template
+

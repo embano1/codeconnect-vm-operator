@@ -1,0 +1,24 @@
+# permissions for end users to edit vmgroups.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vmgroup-editor-role
+rules:
+- apiGroups:
+  - vm.codeconnect.vmworld.com
+  resources:
+  - vmgroups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - vm.codeconnect.vmworld.com
+  resources:
+  - vmgroups/status
+  verbs:
+  - get
