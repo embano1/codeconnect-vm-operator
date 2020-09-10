@@ -141,3 +141,30 @@ kubectl delete vg --all -A
 kubectl delete ns codeconnect-vm-operator-system
 ```
 
+# Advanced Topics (we could not cover)
+
+Feel free to enhance the code and submit PR(s) :)
+
+- Code cleanup (DRY), unit and integration testing
+- Sophisticated K8s/vCenter error handling and CR status representations
+- Configurable target objects, e.g. datacenter, resource pool, cluster, etc.
+- Supporting multi-cluster deployments and customizable namespace-to-vCenter mappings
+- Generated object name verification and truncation within K8s/vCenter limits
+- Advanced RBAC and security/role settings
+- Controller local indexes for faster lookups
+- vCenter object caching (and change notifications via property collector) to
+  reduce network calls and round-trips
+- Using hashing or any other form of compare function for efficient CR (event)
+  change detection
+- Using
+  [expectations](https://github.com/elastic/cloud-on-k8s/blob/cf5de8b7fd09e55b74389128fbf917897b6bf17a/pkg/controller/common/expectations/expectations.go#L11)
+  for more robust CR object handling (interleaving operations)
+detection  
+- Smarter controller (re)queuing mechanisms
+- vCenter task management (tracking) and async vCenter operations to not block too long during `Reconcile()`
+- Robust vCenter session management (keep-alive, gracefully handle expired
+  sessions, other forms of authentication against vCenter, etc.)
+- Multi-VC topologies (one-to-one for now)
+- Sophisticated leader election and availability (HA) concerns
+- Fancy `kustomize`(ation)
+- Production readiness (resources, certificate management, webhooks, quotas, [etc.](https://github.com/mercari/production-readiness-checklist))
