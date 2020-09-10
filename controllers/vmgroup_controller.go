@@ -355,7 +355,7 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		err = eg.Wait()
 		if err != nil {
-			msg := fmt.Sprintf("could not power on virtual machine")
+			msg := "could not power on virtual machine"
 			log.Error(err, msg)
 			status := vmv1alpha1.VmGroupStatus{
 				CurrentReplicas: &current,
@@ -385,7 +385,7 @@ func (r *VmGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// delete any external resources associated with the VmGrouo
+// delete any external resources associated with the VmGroup
 // Ensure that delete implementation is idempotent and safe to invoke
 // multiple types for same object.
 func (r *VmGroupReconciler) deleteExternalResources(ctx context.Context, finder *find.Finder, vg *vmv1alpha1.VmGroup) error {

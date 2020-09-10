@@ -7,5 +7,5 @@ spec:
   cpu: 2
   memory: 2
   replicas: 2
-  template: vm-operator-temp # intentional error to show fix with patch
+  template: doesNotExist # intentional error to show fix with patch
 
