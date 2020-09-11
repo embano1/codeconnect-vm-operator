@@ -3,9 +3,8 @@ kind: VmGroup
 metadata:
   name: vg-1
 spec:
-  # Add fields here
   cpu: 1
-  memory: 1
-  replicas: 1
+  memory: 1 # in GB
+  replicas: 3
   template: vm-operator-template
 
