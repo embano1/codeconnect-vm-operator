@@ -1,5 +1,5 @@
 # codeconnect-vm-operator
-Toy VM Operator for educational purposes and VMware CodeCon written in Go with kubebuilder
+Toy VM Operator using kubebuilder for educational purposes presented at VMware Code Connect 2020
 
 # what are we trying to achieve?
 
@@ -12,7 +12,7 @@ metadata:
   name: vmgroup-sample
 spec:
   # Add fields here
-  cpu: 10
+  cpu: 4
   memory: 1
   replicas: 3
   template: vm-template
@@ -23,10 +23,11 @@ flow: kubectl -> operator (lib:govmomi) -> vCenter
 
 # scaffolding
 
+```bash
 go mod init vmworld/codeconnect
-
 kubebuilder init --domain codeconnect.vmworld.com
 kubebuilder create api --group vm --version v1alpha1 --kind VmGroup
+```
 
 ```bash
 # show existing API resources before creating our CRD
@@ -35,7 +36,8 @@ kubectl api-resources
 
 set crd v1 version in makefile: 
 
-```Makefile
+```bash
+# Makefile
 CRD_OPTIONS ?= "crd:preserveUnknownFields=false,crdVersions=v1,trivialVersions=true"
 ```
 
