@@ -40,6 +40,7 @@ const (
 	finalizerID       = "vm-operator"
 	defaultNameLength = 8 // length of generated names
 	defaultRequeue    = 20 * time.Second
+	successMessage    = "successfully reconciled VmGroup"
 )
 
 var (
@@ -92,24 +93,25 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 			// remove our finalizer from the list and update it.
 			vg.ObjectMeta.Finalizers = removeString(vg.ObjectMeta.Finalizers, finalizerID)
-			if err := r.Update(context.Background(), vg); err != nil {
-				return ctrl.Result{}, err
+			if err := r.Update(ctx, vg); err != nil {
+				return ctrl.Result{}, errors.Wrap(err, "could not remove finalizer")
 			}
 		}
-		// finalizer already removed
+		// finalizer already removed, nothing to do
 		return ctrl.Result{}, nil
 	}
 
 	// register our finalizer if it does not exist
 	if !containsString(vg.ObjectMeta.Finalizers, finalizerID) {
 		vg.ObjectMeta.Finalizers = append(vg.ObjectMeta.Finalizers, finalizerID)
-		if err := r.Update(context.Background(), vg); err != nil {
-			return ctrl.Result{}, err
+		if err := r.Update(ctx, vg); err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "could not add finalizer")
 		}
 	}
 
 	// govmomi error type used for casting
 	var nfe *find.NotFoundError
+	desired := vg.Spec.Replicas
 
 	// check if VmGroup folder exists
 	_, err := getVMGroup(ctx, r.Finder, getGroupName(vg.Namespace, vg.Name))
@@ -124,11 +126,7 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			msg := "could not get VmGroup from vCenter"
 			log.Error(err, msg)
 
-			status := vmv1alpha1.VmGroupStatus{
-				Phase:       vmv1alpha1.ErrorStatusPhase,
-				LastMessage: msg + ": " + err.Error(),
-			}
-			vg.Status = status
+			vg.Status = createStatus(vmv1alpha1.ErrorStatusPhase, msg, err, nil, desired)
 
 			// ignoring this VmGroup in the future due to unknown error
 			return ctrl.Result{}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
@@ -144,11 +142,7 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			msg := "could not create VmGroup in vCenter"
 			log.Error(err, msg)
 
-			status := vmv1alpha1.VmGroupStatus{
-				Phase:       vmv1alpha1.ErrorStatusPhase,
-				LastMessage: msg + ": " + err.Error(),
-			}
-			vg.Status = status
+			vg.Status = createStatus(vmv1alpha1.ErrorStatusPhase, msg, err, nil, desired)
 
 			// ignoring this VmGroup in the future due to unknown error
 			return ctrl.Result{}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
@@ -166,11 +160,7 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			msg := "could not get replicas for VmGroup from vCenter"
 			log.Error(err, msg)
 
-			status := vmv1alpha1.VmGroupStatus{
-				Phase:       vmv1alpha1.ErrorStatusPhase,
-				LastMessage: msg + ": " + err.Error(),
-			}
-			vg.Status = status
+			vg.Status = createStatus(vmv1alpha1.ErrorStatusPhase, msg, err, nil, desired)
 
 			// ignoring this VmGroup in the future due to unknown error
 			return ctrl.Result{}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
@@ -178,7 +168,6 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	eg, egCtx := errgroup.WithContext(ctx) // used for concurrent operations against vCenter
-	desired := vg.Spec.Replicas
 
 	// create replicas (VMs)
 	if !exists {
@@ -187,6 +176,7 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		lim := newLimiter(defaultConcurrency)
 
+		// TODO: process async and return early
 		for i := 0; i < int(desired); i++ {
 			lim.acquire()
 			vmName := fmt.Sprintf("%s-replica-%s", vg.Name, generateName())
@@ -207,29 +197,18 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			log.Error(err, msg)
 
 			if errors.As(err, &nfe) {
-				status := vmv1alpha1.VmGroupStatus{
-					Phase:       vmv1alpha1.ErrorStatusPhase,
-					LastMessage: msg + ": " + err.Error(),
-				}
-				vg.Status = status
+				vg.Status = createStatus(vmv1alpha1.ErrorStatusPhase, msg, err, nil, desired)
+				// ignoring in the future due to permanent error
 				return ctrl.Result{}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
 			}
 
-			status := vmv1alpha1.VmGroupStatus{
-				Phase:       vmv1alpha1.PendingStatusPhase,
-				LastMessage: msg + ": " + err.Error(),
-			}
-			vg.Status = status
-
-			// ignoring in the future due to permanent error
+			// TODO: be smarter about how we calculate "current" count
+			vg.Status = createStatus(vmv1alpha1.PendingStatusPhase, msg, err, nil, desired)
+			// retry after some time
 			return ctrl.Result{RequeueAfter: defaultRequeue}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
 		}
 
-		status := vmv1alpha1.VmGroupStatus{
-			Phase:           vmv1alpha1.RunningStatusPhase,
-			CurrentReplicas: &desired,
-			LastMessage:     "successfully reconciled VmGroup",
-		}
+		status := createStatus(vmv1alpha1.RunningStatusPhase, successMessage, nil, &desired, desired)
 		vg.Status = status
 
 		// we're done, return successfully
@@ -267,21 +246,13 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			log.Error(err, msg)
 
 			if errors.As(err, &nfe) {
-				status := vmv1alpha1.VmGroupStatus{
-					Phase:       vmv1alpha1.ErrorStatusPhase,
-					LastMessage: msg + ": " + err.Error(),
-				}
-				vg.Status = status
+				vg.Status = createStatus(vmv1alpha1.ErrorStatusPhase, msg, err, &current, desired)
 
 				// ignoring in the future due to permanent error
 				return ctrl.Result{}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
 			}
 
-			status := vmv1alpha1.VmGroupStatus{
-				CurrentReplicas: &current,
-				Phase:           vmv1alpha1.PendingStatusPhase,
-				LastMessage:     msg + ": " + err.Error(),
-			}
+			status := createStatus(vmv1alpha1.PendingStatusPhase, msg, err, &current, desired)
 			vg.Status = status
 
 			return ctrl.Result{RequeueAfter: defaultRequeue}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
@@ -309,11 +280,9 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			msg := "could not delete replica(s)"
 			log.Error(err, msg)
-			status := vmv1alpha1.VmGroupStatus{
-				CurrentReplicas: &current,
-				Phase:           vmv1alpha1.PendingStatusPhase,
-				LastMessage:     msg + ": " + err.Error(),
-			}
+
+			status := createStatus(vmv1alpha1.PendingStatusPhase, msg, err, &current, desired)
+			status.CurrentReplicas = &current
 			vg.Status = status
 
 			return ctrl.Result{RequeueAfter: defaultRequeue}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
@@ -327,10 +296,9 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			if err != nil {
 				msg := fmt.Sprintf("could not get power state for vm %q", vm.Name())
 				log.Error(err, msg)
-				status := vmv1alpha1.VmGroupStatus{
-					Phase:       vmv1alpha1.PendingStatusPhase,
-					LastMessage: msg + ": " + err.Error(),
-				}
+
+				status := createStatus(vmv1alpha1.PendingStatusPhase, msg, err, &current, desired)
+				status.CurrentReplicas = &current
 				vg.Status = status
 
 				return ctrl.Result{RequeueAfter: defaultRequeue}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
@@ -357,22 +325,16 @@ func (r *VmGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		if err != nil {
 			msg := "could not power on virtual machine"
 			log.Error(err, msg)
-			status := vmv1alpha1.VmGroupStatus{
-				CurrentReplicas: &current,
-				Phase:           vmv1alpha1.PendingStatusPhase,
-				LastMessage:     msg + ": " + err.Error(),
-			}
+
+			status := createStatus(vmv1alpha1.PendingStatusPhase, msg, err, &current, desired)
+			status.CurrentReplicas = &current
 			vg.Status = status
 
 			return ctrl.Result{RequeueAfter: defaultRequeue}, errors.Wrap(r.Client.Status().Update(ctx, vg), "could not update status")
 		}
 	}
 
-	status := vmv1alpha1.VmGroupStatus{
-		Phase:           vmv1alpha1.RunningStatusPhase,
-		CurrentReplicas: &desired,
-		LastMessage:     "successfully reconciled VmGroup",
-	}
+	status := createStatus(vmv1alpha1.RunningStatusPhase, successMessage, nil, &current, desired)
 	vg.Status = status
 
 	// we're done, return successfully
@@ -383,6 +345,20 @@ func (r *VmGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&vmv1alpha1.VmGroup{}).
 		Complete(r)
+}
+
+func createStatus(phase vmv1alpha1.StatusPhase, msg string, err error, current *int32, desired int32) vmv1alpha1.VmGroupStatus {
+	if err != nil {
+		msg = msg + ": " + err.Error()
+	}
+
+	status := vmv1alpha1.VmGroupStatus{
+		Phase:           phase,
+		CurrentReplicas: current,
+		DesiredReplicas: desired,
+		LastMessage:     msg,
+	}
+	return status
 }
 
 // delete any external resources associated with the VmGroup

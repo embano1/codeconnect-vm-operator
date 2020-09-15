@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	// TODO: make configurable
 	vmPath = "/vcqaDC/vm/vm-operator"
 	// underlying SOAP error is not typed, thus ugly grepping hack
 	alreadyDeletedErr = "has already been deleted or has not been completely created"
