@@ -147,10 +147,11 @@ kubectl delete ns codeconnect-vm-operator-system
 
 Feel free to enhance the code and submit PR(s) :)
 
-- Code cleanup (DRY), unit and integration testing
+- Code cleanup (DRY), unit/integration/E2E testing
 - Sophisticated K8s/vCenter error handling and CR status representations
 - Configurable target objects, e.g. datacenter, resource pool, cluster, etc.
 - Supporting multi-cluster deployments and customizable namespace-to-vCenter mappings
+- Multi-VC topologies (one-to-one for now)
 - Generated object name verification and truncation within K8s/vCenter limits
 - Advanced RBAC and security/role settings
 - Controller local indexes for faster lookups
@@ -166,7 +167,9 @@ detection
 - vCenter task management (tracking) and async vCenter operations to not block too long during `Reconcile()`
 - Robust vCenter session management (keep-alive, gracefully handle expired
   sessions, other forms of authentication against vCenter, etc.)
-- Multi-VC topologies (one-to-one for now)
 - Sophisticated leader election and availability (HA) concerns
 - Fancy `kustomize`(ation)
-- Production readiness (resources, certificate management, webhooks, quotas, [etc.](https://github.com/mercari/production-readiness-checklist))
+- CRD API version upgrades
+- Validation/defaulting with admission control/webhooks in the API server
+- Advanced status reporting ([conditions](https://github.com/kubernetes-sigs/cluster-api/blob/master/docs/proposals/20200506-conditions.md), etc.)
+- Production readiness (resources, certificate management, quotas, [etc.](https://github.com/mercari/production-readiness-checklist))
