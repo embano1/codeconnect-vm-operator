@@ -2,7 +2,7 @@
 # About
 
 Toy VM Operator using kubebuilder for educational purposes presented at VMware
-Code Connect 2020.
+Code Connect 2020. Slides for the talk can be found [here](./slides.pdf).
 
 > **Note:** For a production-grade solution please see [Kubernetes Cluster API Provider vSphere](https://github.com/kubernetes-sigs/cluster-api-provider-vsphere#kubernetes-cluster-api-provider-vsphere). 
 
