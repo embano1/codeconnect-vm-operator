@@ -114,7 +114,7 @@ Install all the following:
 - Docker Desktop - https://www.docker.com/products/docker-desktop
 - Kind (Kubernetes in Docker) -  https://kind.sigs.K8s.io/docs/user/quick-start/
 - Kubebuilder - https://go.kubebuilder.io/quick-start.html
-- Kustomize - https://kubernetes-sigs.github.io/kustomize/installation/
+- Kustomize - https://kubectl.docs.kubernetes.io/installation/
 - [Optional but recommended] - Code editor such as
   [VScode](https://code.visualstudio.com/download) or
   [goland](https://www.jetbrains.com/go/download/#section=mac) (we will use
